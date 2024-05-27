@@ -1,0 +1,184 @@
+﻿@{
+    ViewData["Title"] = "CrearFactura";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@model FacturaPrueba.Models.ViewModel.FacturaVM
+
+<div class="card border-1 p-2">
+    <div class="row">
+        <div class="col-sm">
+            <div class="card border-1 p-2">
+                <div class="card p-3">
+                    <form asp-action="RegistrarFactura" method="post">
+                        <div class="form-group">
+                            <label for="Cliente">Cliente</label>
+                            <input type="text" class="form-control" id="Cliente" name="Objfactura.Cliente" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="Fecha">Fecha</label>
+                            <input type="date" class="form-control" id="Fecha" name="Objfactura.Fecha" required />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Registrar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="card border-1 p-2">
+                <div class="card p-3">
+                    <form id="detalleForm" method="post">
+                        <input type="hidden" name="IdFactura" value="@Model.Objfactura.IdFactura" />
+                        <div class="form-group">
+                            <label for="Descripcion">Descripción</label>
+                            <input type="text" class="form-control" id="Descripcion" name="Descripcion" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="Cantidad">Cantidad</label>
+                            <input type="number" class="form-control" id="Cantidad" name="Cantidad" required min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label for="PrecioUnitario">Precio Unitario</label>
+                            <input type="number" step="0.01" class="form-control" id="PrecioUnitario" name="PrecioUnitario" required />
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="checkiva" name="checkiva">
+                            <label class="form-check-label" for="checkiva">IVA</label>
+                        </div>
+                        <button type="button" id="btnagregar" class="btn btn-primary">Agregar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-1">
+    <div class="card p-3">
+        <table id="detallesTable" class="table">
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Subtotal</th>
+                    <th>IVA</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se agregarán dinámicamente los detalles -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var detalleForm = document.getElementById("detalleForm");
+        var detalleTable = document.getElementById("detallesTable").getElementsByTagName('tbody')[0];
+        var btnAgregar = document.getElementById("btnagregar");
+        var checkIva = document.getElementById("checkiva");
+
+        btnAgregar.addEventListener("click", function () {
+            // Obtener los valores del formulario
+            var descripcion = document.getElementById("Descripcion").value.trim();
+            var cantidad = parseInt(document.getElementById("Cantidad").value);
+            var precioUnitario = parseFloat(document.getElementById("PrecioUnitario").value);
+
+            // Validar que no haya campos vacíos y cantidad sea mayor o igual a 1
+            if (descripcion === "" || isNaN(cantidad) || cantidad < 1 || isNaN(precioUnitario)) {
+                alert("Por favor, completa todos los campos correctamente.");
+                return;
+            }
+
+            // Calcular subtotal
+            var subtotal = cantidad * precioUnitario;
+
+            // Calcular IVA si está activo el checkbox
+            var iva = 0;
+            if (checkIva.checked) {
+                iva = subtotal * 0.12;
+            }
+
+            // Calcular total
+            var total = subtotal + iva;
+
+            // Crear una nueva fila en la tabla
+            var newRow = detalleTable.insertRow();
+            var cell1 = newRow.insertCell(0);
+            var cell2 = newRow.insertCell(1);
+            var cell3 = newRow.insertCell(2);
+            var cell4 = newRow.insertCell(3);
+            var cell5 = newRow.insertCell(4);
+            var cell6 = newRow.insertCell(5);
+
+            // Asignar los valores a las celdas de la nueva fila
+            cell1.innerHTML = descripcion;
+            cell2.innerHTML = cantidad;
+            cell3.innerHTML = precioUnitario.toFixed(2);
+            cell4.innerHTML = subtotal.toFixed(2);
+            cell5.innerHTML = iva.toFixed(2);
+            cell6.innerHTML = total.toFixed(2);
+
+            // Limpiar los campos del formulario
+            document.getElementById("Descripcion").value = "";
+            document.getElementById("Cantidad").value = "";
+            document.getElementById("PrecioUnitario").value = "";
+            checkIva.checked = false;
+        });
+
+        // Capturar el envío del formulario principal
+        detalleForm.addEventListener("submit", function (event) {
+            event.preventDefault(); // Prevenir la recarga de la página
+
+            // Obtener los detalles de la tabla y prepararlos para enviar al servidor
+            var detalles = [];
+            var rows = detalleTable.rows;
+
+            for (var i = 0; i < rows.length; i++) {
+                var detalle = {
+                    Producto: rows[i].cells[0].innerHTML,
+                    Cantidad: parseInt(rows[i].cells[1].innerHTML),
+                    PrecioUnitario: parseFloat(rows[i].cells[2].innerHTML),
+                    Subtotal: parseFloat(rows[i].cells[3].innerHTML),
+                    Iva: parseFloat(rows[i].cells[4].innerHTML),
+                    Total: parseFloat(rows[i].cells[5].innerHTML)
+                };
+                detalles.push(detalle);
+            }
+
+            // Preparar los datos para enviar al controlador
+            var formData = {
+                Objfactura: {
+                    Cliente: document.getElementById("Cliente").value.trim(),
+                    Fecha: document.getElementById("Fecha").value
+                },
+                ListdetalleFactura: detalles
+            };
+
+            // Enviar los datos al controlador mediante una petición fetch o similar
+            fetch('@Url.Action("RegistrarFactura", "Factura")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al registrar la factura.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Redireccionar o manejar respuesta del servidor si es necesario
+                    console.log('Factura registrada correctamente.');
+                    window.location.href = '@Url.Action("Index", "Factura")';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Hubo un error al intentar registrar la factura.');
+                });
+        });
+    });
+</script>
